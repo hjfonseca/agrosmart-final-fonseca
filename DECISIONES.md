@@ -238,12 +238,15 @@ Respuesta enmascarada generada por onErrorResume:
 
 **6.2** ¿Cómo lograste que el id inexistente responda **404** y no 500?
 
->
+>Se logró mediante dos mecanismos combinados dentro de la arquitectura reactiva:
+En ProductoService.java, cuando la búsqueda por ID en la base de datos retorna un Optional vacío, la canalización reactiva ejecuta el operador switchIfEmpty(Mono.error(new ProductoNoEncontradoException(id))), emitiendo una señal de error específica dentro del flujo.
+La clase de excepción personalizada ProductoNoEncontradoException está anotada con @ResponseStatus(HttpStatus.NOT_FOUND). Spring WebFlux intercepta esta excepción de dominio y traduce automáticamente la señal de error en una respuesta HTTP con código de estado 404 Not Found en lugar de un error interno de servidor (500).
 
 **6.3** ¿Qué pasaría si tu controlador devolviera `List<Producto>` en lugar de
 `Flux<Producto>`? ¿Seguiría compilando? ¿Seguiría siendo no bloqueante?
 
->
+> Compilación: No compilaría directamente a menos que se fuerce la conversión dentro del método invocando .collectList().block(). Si se intenta devolver un List<Producto> directamente desde un flujo reactivo sin bloquear, el compilador rechazará la firma por incompatibilidad de tipos entre Flux<Producto> y List<Producto>.
+Dejaría de ser no bloqueante. Al retornar un List<Producto>, el hilo del servidor se ve obligado a esperar a que todos los elementos sean recuperados y procesados de la base de datos para materializar la lista completa en memoria antes de empezar a escribir la respuesta HTTP. Esto destruye la naturaleza reactiva de streaming por demanda de WebFlux, bloqueando la concurrencia.
 
 ---
 
