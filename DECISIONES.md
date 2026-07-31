@@ -128,14 +128,15 @@ Se implementó mediante la interfaz funcional Function<Producto, Producto>. En l
 
 ```java
 public Flux<Producto> obtenerProductosComercializables() {
-        return Mono.fromCallable(repository::findAll)
-                .subscribeOn(Schedulers.boundedElastic())
-                .flatMapMany(Flux::fromIterable)
-                .map(ProductoMapper::toDominio)
-                .filter(ProductoFilters.IS_VALID)
-                .doOnNext(ProductoFilters.LOG_PRODUCTO)
-                .map(ProductoFilters.A_MAYUSCULAS);
-    }
+    return Mono.fromCallable(repository::findAll)
+            .subscribeOn(Schedulers.boundedElastic())
+            .flatMapMany(Flux::fromIterable)
+            .map(ProductoMapper::toDominio)
+            .map(ProductoFilters.A_MAYUSCULAS)
+            .filter(ProductoFilters.IS_VALID)
+            .doOnNext(ProductoFilters.LOG_PRODUCTO)
+            .defaultIfEmpty(PRODUCTO_GENERICO);
+}
 ```
 
 **4.2** ¿Qué pasa **exactamente** si eliminas
@@ -156,9 +157,9 @@ En cambio, Mono.fromCallable(repository::findAll) retrasa la ejecución de la co
 **4.4** En **tu** código, ¿dónde usaste `defaultIfEmpty` y dónde `switchIfEmpty`, y por
 qué no son intercambiables en esos dos lugares?
 
->defaultIfEmpty se utiliza cuando se quiere devolver un valor u objeto por defecto si la secuencia reactiva termina sin emitir ningún elemento. Por ejemplo, puede retornar una instancia como new Producto cuando la consulta no encuentra resultados.
-Mientras que, switchIfEmpty(Publisher<T> fallback) resulta útil cuando, en lugar de un valor fijo, se necesita continuar con otro flujo reactivo. Esto permite, por ejemplo, generar un Mono.error(new ResponseStatusException(...)) o realizar una segunda búsqueda en otro repositorio mediante Mono.defer(...).
-Aunque ambos operadores actúan cuando la secuencia está vacía, no cumplen la misma función. defaultIfEmpty recibe un objeto del tipo T y lo emite como valor de respaldo, mientras que switchIfEmpty requiere un Publisher, como un Mono o un Flux, para continuar con otro flujo de ejecución, por esto, no pueden utilizarse indistintamente: un Publisher no puede reemplazar un valor directo en defaultIfEmpty, y switchIfEmpty tampoco acepta un objeto escalar que no implemente la interfaz Publisher.
+>defaultIfEmpty en el método obtenerProductosComercializables(): Para emitir una instancia fallback estática si el filtro descartó todos los elementos y el flujo finalizó vacío.
+switchIfEmpty(Mono.error(new ProductoNoEncontradoException(id))) en el método buscarPorId(id): Para conmutar a un flujo de error y lanzar la excepción cuando el repositorio no encuentra la entidad por su ID.
+Por qué no son intercambiables: defaultIfEmpty exige como parámetro un objeto o valor escalar directo del tipo del dominio (T) y lo emite si la secuencia está vacía. Mientras que, switchIfEmpty requiere un Publisher<T> (Mono o Flux) para continuar la ejecución en otro canal reactivo. Si usara defaultIfEmpty en buscarPorId, tendría que pasarle un objeto Producto y no podría detonar la señal de error reactiva Mono.error(...); y viceversa, switchIfEmpty no aceptaría el objeto directo PRODUCTO_GENERICO sin antes envolverlo en una estructura reactiva.
 
 **4.5** ¿Por qué `doOnNext` no sirve para transformar el elemento, si aparentemente
 "recibe" el producto?
