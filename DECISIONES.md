@@ -335,20 +335,35 @@ StepVerifier.create(...) solo construye la definición de las comprobaciones. Es
 **8.1** Pega tu `git log --oneline --graph --all`.
 
 ```
-
+PS D:\1. Espe\8. Octavo Semestre\3. Programación Avanzada\agrosmart-final-fonseca> git log --oneline --graph --all
+* 6d79fee (HEAD -> feature/documentacion, origin/feature/pruebas, feature/pruebas) test: agrega pruebas del modelo, logica funcional, flujo reactivo e ia
+* ee6175c (origin/feature/api-reactiva, feature/api-reactiva) feat: expone endpoints reactivos y de publicidad
+* 633a92d feat: expone endpoints reactivos y de publicidad
+* ba92a1c (origin/feature/ia-langchain4j, feature/ia-langchain4j) feat: integra langchain4j para publicidad de productos
+* 168ccdf (origin/feature/servicio-reactivo, feature/servicio-reactivo) feat: implementa servicio reactivo con boundedElastic y operadores
+* 750d6c1 (origin/feature/reactor-langchain4j, feature/reactor-langchain4j) feat:se  completa documentacion de arquitectura reactiva en decisiones md
+* 3f45bbf (origin/feature/modelo-inmutable, feature/modelo-inmutable) feat: implementa modelo de dominio inmutable y filtros funcionales
+* ca13647 (origin/feature/persistencia-jpa, feature/persistencia-jpa) feat: agrega entidad jpa de productos y siembra de datos
+* c0e8dc8 (origin/feature/config-perfiles, feature/config-perfiles) chore: configura perfil prod con postgresql y puerto propio
+* cf26654 (origin/main, origin/HEAD, main) chore: inicializa proyecto agrosmart con webflux, jpa y langchain4j
+* db1297c chore: registra identidad del examen
+* bb9bc70 Initial commit
+:
 ```
 
 **8.2** ¿Qué fase te tomó más tiempo del previsto y por qué?
 
->
+>La Fase 4 y 7. Mockear el flujo reactivo de ProductoService exigió adaptar los datos de prueba (datosDePrueba()) a la firma exacta de 6 parámetros de ProductoEntity. De igual manera, fue clave asegurar que las aserciones con StepVerifier verificaran correctamente el filtrado de ProductoFilters.IS_VALID y el fallback perezoso defaultIfEmpty sin depender de PostgreSQL.
 
 **8.3** Si tuvieras 30 minutos más, ¿qué mejorarías **primero** de tu entrega y por qué
 esa y no otra?
 
->
+>Implementaría un @RestControllerAdvice global para capturar excepciones reactivas adicionales y retornar respuestas estandarizadas bajo la especificación (ProblemDetail).
 
 **8.4** Declara honestamente qué herramientas consultaste durante el examen
 (documentación, apuntes, asistentes de IA) y para qué. **Esta declaración no descuenta
 puntaje**; su omisión o falsedad sí constituye falta de honestidad académica.
 
->
+> Documentación oficial de Spring WebFlux y Project Reactor: Para validar la firma de los operadores flatMapMany, fromCallable y el aislamiento en Schedulers.boundedElastic().
+Documentación de LangChain4j: Para verificar la integración declarativa mediante @AiService, @UserMessage y el mapeo de variables con @V.
+Asistente de IA (Gemini): Para la resolución de incompatibilidades en firmas de constructores durante la compilación de pruebas unitarias y apoyo en el formateo de la bitácora de documentación.
