@@ -87,24 +87,37 @@ lo fuera? (piensa en la restricción `unique` de `nombre_producto`)
 **3.1** ¿Por qué tienes **dos** clases (`ProductoEntity` y `Producto`) en lugar de una?
 ¿Qué te impide hacer inmutable directamente la entidad de Hibernate?
 
->
+>Mantenemos dos clases para separar las responsabilidades de la arquitectura por capas. ProductoEntity pertenece a la capa de persistencia y está acoplada al framework JPA/Hibernate, el cual requiere por especificación constructores sin argumentos, métodos modificadores y mutabilidad activa para gestionar el ciclo de vida del ORM.
+Mientras que, Producto es el modelo del dominio de negocio y debe garantizar inmutabilidad absoluta, esto evita efectos secundarios en los flujos funcionales, asegura la consistencia de los datos en entornos multihilo y desacopla la lógica de negocio de los detalles técnicos de la base de datos.
 
 **3.2** Escribe el código exacto de **tus dos** copias defensivas e indica en qué línea
 está cada una.
 
 ```java
+// Copia defensiva 1 (ENTRADA - Constructor, dentro de Producto.java):
+// Evita que modificaciones a la lista original pasada como argumento afecten el estado interno.
+this.correosNotificacion = (correosNotificacion != null) ? new ArrayList<>(correosNotificacion) : new ArrayList<>();
 
+// Copia defensiva 2 (SALIDA - Getter getCorreosNotificacion(), dentro de Producto.java):
+// Retorna una vista inmodificable sobre una nueva copia para que el llamador no altere el estado interno.
+public List<String> getCorreosNotificacion() {
+    return Collections.unmodifiableList(new ArrayList<>(this.correosNotificacion));
+}
 ```
 
 **3.3** ¿Por qué la copia defensiva **solo en el getter** no sería suficiente? Describe
 el ataque concreto que quedaría abierto sobre **tu** clase.
 
->
+>Si únicamente se hiciera la copia defensiva en el getter, la referencia asignada en el constructor apuntaría exactamente al mismo objeto List que el llamador externo pasó. Vulnerabilidad de ejemplo:
+Un cliente externo podría crear una lista mutable, pasarla al constructor de Producto y conservar esa referencia fuera de la clase:
+> List<String> misCorreos = new ArrayList<>(List.of("admin@agro.ec"));
+Producto producto = new Producto(1L, "Quinua", "Quinua", new BigDecimal("10.00"), misCorreos);// Ataque posterior sin pasar por ningún método de Producto:
+misCorreos.add("hacker@malicioso.com"); // O misCorreos.clear();
 
 **3.4** ¿Cómo implementaste `A_MAYUSCULAS` para no mutar el `Producto` recibido?
 
 ```java
-
+Se implementó mediante la interfaz funcional Function<Producto, Producto>. En lugar de modificar el atributo nombre mediante un setter, se instancia y retorna un nuevo objeto Producto con el atributo transformado a mayúsculas, dejando el objeto original recibido exactamente intacto.
 ```
 
 ---
