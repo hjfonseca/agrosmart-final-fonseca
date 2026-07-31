@@ -174,29 +174,56 @@ Por esta razon, doOnNext no modifica el contenido de los elementos que pasan por
 **5.1** Pega tu interfaz `AgroSmartAIService` completa.
 
 ```java
+package ec.edu.espe.agrosmart.service;
 
+import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
+import dev.langchain4j.service.spring.AiService;
+
+@AiService
+public interface AgroSmartAIService {
+
+    @UserMessage("""
+            Redacta una frase publicitaria de máximo 100 caracteres para vender \
+            {{producto}} dirigido a {{audiencia}}.""")
+    String generarPublicidad(@V("producto") String producto,
+                             @V("audiencia") String audiencia);
+}
 ```
 
 **5.2** ¿Qué hace `@V("producto")` y qué pasaría si lo quitaras dejando solo el
 parámetro?
 
->
+>La anotación @V("producto") mapea explícitamente el valor recibido por el parámetro del método con la variable plantilla {{producto}} definida en el prompt del @UserMessage.
+Si se quitara esta anotación, el compilador de Java no mantendrá la asociación entre el argumento y la variable. Como resultado LangChain4j no sabría a qué marcador de posición corresponde cada parámetro y lanzará una excepción al no poder resolver las variables del prompt.
 
 **5.3** ¿En qué archivo y con qué líneas configuraste el modelo? ¿Por qué **no** hizo
 falta declarar un `@Bean`?
 
->
+>Se configuró en el archivo src/main/resources/application-prod.properties
+con las siguientes propiedades:
+langchain4j.open-ai.chat-model.api-key=demo
+langchain4j.open-ai.chat-model.model-name=gpt-4o-mini
+langchain4j.open-ai.chat-model.timeout=30s
+langchain4j.open-ai.chat-model.log-requests=true
+langchain4j.open-ai.chat-model.log-responses=true
+logging.level.dev.langchain4j=DEBUG
+Gracias al starter de integración de LangChain4j con Spring Boot (langchain4j-open-ai-spring-boot-starter), el mecanismo de auto-configuración de Spring Boot detecta automáticamente el prefijo langchain4j.open-ai en las propiedades y registra internamente el componente de modelo y las interfaces anotadas con @AiService en el contexto de Spring.
 
 **5.4** ¿Por qué la llamada a la IA también necesita `boundedElastic`, si no es una
 consulta a base de datos?
 
->
+>Porque la invocación cliente a la API remota de la IA mediante LangChain4j es una operación síncrona/bloqueante de I/O de red.
+Cualquier cliente HTTP bloqueante reteniendo el hilo mientras espera la respuesta del servidor remoto en el Event Loop de Netty causaría la saturación del hilo y degradaría el rendimiento de todo el servidor reactivo. boundedElastic traslada esa llamada bloqueante a un pool de hilos elástico dedicado para peticiones I/O.
 
 **5.5** Si tu proveedor devolvió un error durante el examen, pega el mensaje real y la
 respuesta que produjo tu `onErrorResume`.
 
 ```
-
+Mensaje de excepción/log capturado:
+dev.langchain4j.exception.HttpException: 429 Too Many Requests
+Respuesta enmascarada generada por onErrorResume:
+"Publicidad no disponible en este momento (HttpException)"
 ```
 
 ---
