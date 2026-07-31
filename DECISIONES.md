@@ -127,29 +127,45 @@ Se implementó mediante la interfaz funcional Function<Producto, Producto>. En l
 **4.1** Pega tu método `obtenerProductosComercializables()` completo.
 
 ```java
-
+public Flux<Producto> obtenerProductosComercializables() {
+    return Mono.fromCallable(repository::findAll)
+            .subscribeOn(Schedulers.boundedElastic())
+            .flatMapMany(Flux::fromIterable)
+            .map(ProductoMapper::toDominio)
+            .map(ProductoFilters.A_MAYUSCULAS)
+            .filter(ProductoFilters.IS_VALID)
+            .doOnNext(ProductoFilters.LOG_PRODUCTO)
+            .defaultIfEmpty(PRODUCTO_GENERICO);
+}
 ```
 
 **4.2** ¿Qué pasa **exactamente** si eliminas
 `.subscribeOn(Schedulers.boundedElastic())` de ese método? Si lo probaste, indica qué
 hilo aparecía en el log antes y después.
 
->
+>Si se elimina .subscribeOn(Schedulers.boundedElastic()), la consulta bloqueante de JPA (repository.findAll()) pasa a ejecutarse directamente en el hilo del Event Loop de Netty.
+Sin subscribeOn: al revisar los registros de ejecución o durante la depuración, es común observar que la consulta se procesa en un hilo como reactor-http-nio-1. Debido a que la operación es bloqueante, este hilo permanece ocupado hasta que la base de datos responde, lo que impide que Netty atienda otras solicitudes al mismo tiempo y afecta el comportamiento no bloqueante que caracteriza a Spring WebFlux.
+Con subscribeOn: la consulta se traslada a un hilo del pool boundedElastic, por lo que en los registros aparecen hilos con nombres como boundedElastic-1. De esta forma, el hilo reactor-http-nio-1 queda disponible para continuar gestionando otras peticiones HTTP de manera concurrente, preservando el funcionamiento reactivo de la aplicación.
 
 **4.3** ¿Por qué `Mono.fromCallable(...)` y no `Mono.just(repository.findAll())`?
 (pista: cuándo se ejecuta cada uno)
 
->
+>La principal diferencia entre ambas opciones está en el momento en que se ejecuta la consulta, si la evaluación es eager (inmediata) o lazy (diferida).
+Con Mono.just(repository.findAll()), el método repository.findAll() se ejecuta de inmediato mientras se construye el flujo reactivo. Esto significa que la consulta se realiza en el hilo actual, normalmente el Event Loop de Netty, antes de que operadores como subscribeOn puedan cambiar el contexto de ejecución.
+En cambio, Mono.fromCallable(repository::findAll) retrasa la ejecución de la consulta hasta que existe una suscripción al flujo. Gracias a este comportamiento, subscribeOn(Schedulers.boundedElastic()) puede intervenir y hacer que la operación se ejecute en un hilo del pool boundedElastic, evitando bloquear el Event Loop y manteniendo el modelo reactivo de WebFlux.
 
 **4.4** En **tu** código, ¿dónde usaste `defaultIfEmpty` y dónde `switchIfEmpty`, y por
 qué no son intercambiables en esos dos lugares?
 
->
+>defaultIfEmpty en el método obtenerProductosComercializables(): Para emitir una instancia fallback estática si el filtro descartó todos los elementos y el flujo finalizó vacío.
+switchIfEmpty(Mono.error(new ProductoNoEncontradoException(id))) en el método buscarPorId(id): Para conmutar a un flujo de error y lanzar la excepción cuando el repositorio no encuentra la entidad por su ID.
+Por qué no son intercambiables: defaultIfEmpty exige como parámetro un objeto o valor escalar directo del tipo del dominio (T) y lo emite si la secuencia está vacía. Mientras que, switchIfEmpty requiere un Publisher<T> (Mono o Flux) para continuar la ejecución en otro canal reactivo. Si usara defaultIfEmpty en buscarPorId, tendría que pasarle un objeto Producto y no podría detonar la señal de error reactiva Mono.error(...); y viceversa, switchIfEmpty no aceptaría el objeto directo PRODUCTO_GENERICO sin antes envolverlo en una estructura reactiva.
 
 **4.5** ¿Por qué `doOnNext` no sirve para transformar el elemento, si aparentemente
 "recibe" el producto?
 
->
+>doOnNext recibe un Consumer<T>, cuya función es ejecutar acciones adicionales sobre cada elemento emitido sin alterar el flujo de datos. Como el método accept(T t) tiene un tipo de retorno void, este operador únicamente realiza efectos secundarios, como registrar información en los logs, generar métricas o llevar a cabo tareas de auditoría.
+Por esta razon, doOnNext no modifica el contenido de los elementos que pasan por la secuencia; simplemente los observa y los deja continuar sin cambios hacia los siguientes operadores. Si lo que se necesita es transformar un objeto de tipo T en otro de tipo R, debe utilizarse map ya que este operador recibe una Function<T, R> y devuelve una nueva instancia con la transformación aplicada.
 
 ---
 
