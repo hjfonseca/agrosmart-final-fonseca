@@ -233,7 +233,22 @@ Respuesta enmascarada generada por onErrorResume:
 **6.1** Pega la salida real de tus cuatro `curl`.
 
 ```
+Microsoft Windows [Versión 10.0.26200.8875]
+(c) Microsoft Corporation. Todos los derechos reservados.
 
+C:\Users\harvy>curl http://localhost:8189/api/productos
+[{"id":1,"nombre":"QUINUA PERLADA SELECCIONADA CHIMBORAZO","categoria":"Quinua","precioUsd":11.80,"correosNotificacion":["ventas@sumakgranosis.com.ec","contacto@agrochimborazo.org"]},{"id":2,"nombre":"HARINA INTEGRAL DE QUINUA ANDINA 500G","categoria":"Quinua","precioUsd":4.75,"correosNotificacion":["pedidos@molinosandinos.ec"]},{"id":3,"nombre":"HOJUELAS DE QUINUA PRECOCIDAS EXPORT","categoria":"Quinua","precioUsd":16.50,"correosNotificacion":["comercial@ecoquinua-ecuador.com"]}]
+C:\Users\harvy>curl http://localhost:8189/api/productos/1
+{"id":1,"nombre":"Quinua Perlada Seleccionada Chimborazo","categoria":"Quinua","precioUsd":11.80,"correosNotificacion":["ventas@sumakgranosis.com.ec","contacto@agrochimborazo.org"]}
+C:\Users\harvy>curl -i http://localhost:8189/api/productos/9999
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+Content-Length: 127
+
+{"timestamp":"2026-07-31T18:14:01.826Z","path":"/api/productos/9999","status":404,"error":"Not Found","requestId":"a4360b00-3"}
+C:\Users\harvy>curl "http://localhost:8189/api/agrosmart/publicidad?producto=Quinua%20organica&audiencia=exportadores%20andinos"
+"Impulsa tu negocio con nuestra quinua orgánica: calidad andina que conquista el mundo."
+C:\Users\harvy>
 ```
 
 **6.2** ¿Cómo lograste que el id inexistente responda **404** y no 500?
@@ -255,28 +270,63 @@ Dejaría de ser no bloqueante. Al retornar un List<Producto>, el hilo del servid
 **7.1** Pega la salida real de tus pruebas (`./mvnw test` o `./gradlew test`).
 
 ```
-
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running ec.edu.espe.agrosmart.AgrosmartApplicationTests
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.015 s -- in ec.edu.espe.agrosmart.AgrosmartApplicationTests
+[INFO] Running ec.edu.espe.agrosmart.domain.ProductoFiltersTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.090 s -- in ec.edu.espe.agrosmart.domain.ProductoFiltersTest
+[INFO] Running ec.edu.espe.agrosmart.domain.ProductoTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in ec.edu.espe.agrosmart.domain.ProductoTest
+[INFO] Running ec.edu.espe.agrosmart.service.ProductoServiceTest
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (C:\Users\harvy\.m2\repository\net\bytebuddy\byte-buddy-agent\1.18.10\byte-buddy-agent-1.18.10.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+[AUDITORIA AGROSMART] Procesando producto ID: 1 - Nombre: QUINUA 1
+[AUDITORIA AGROSMART] Procesando producto ID: 2 - Nombre: QUINUA 2
+[AUDITORIA AGROSMART] Procesando producto ID: 3 - Nombre: QUINUA 3
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.145 s -- in ec.edu.espe.agrosmart.service.ProductoServiceTest
+[INFO] Running ec.edu.espe.agrosmart.service.PublicidadServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.068 s -- in ec.edu.espe.agrosmart.service.PublicidadServiceTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 1
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  4.483 s
+[INFO] Finished at: 2026-07-31T14:05:07-05:00
+[INFO] ------------------------------------------------------------------------
 ```
 
 **7.2** ¿Cuántos productos espera tu `expectNextCount(...)` y por qué ese número
 concreto? Relaciónalo con tu semilla.
 
->
+> Espera 3 productos, ya que mi semilla de cédula es la 89. En la prueba se simula el repositorio con 5 entidades de prueba: 3 registradas como válidas y 2 como inválidas (una con precio 0 y otra con la lista de correos de notificación vacía). El pipeline funcional aplica filter(ProductoFilters.IS_VALID), descartando los 2 registros con inconsistencias y emitiendo en el Flux únicamente los 3 productos que cumplen las reglas de negocio.
 
 **7.3** ¿Por qué mockeaste `ProductoRepository` en lugar de dejar que la prueba consulte
 PostgreSQL?
 
->
+>Para mantener las pruebas unitarias aisladas, rápidas, deterministas y desancladas de infraestructura externa.
+Si dependieran de una conexión real a PostgreSQL, las pruebas serían lentas, requerirían levantar el servicio de base de datos, dependerían del estado previo de la tabla y podrían fallar por motivos ajenos a la lógica del código. El mock de Mockito simula las respuestas del repositorio en memoria de forma instantánea.
 
 **7.4** ¿Qué demuestra `assertNotSame` que `assertEquals` **no** demuestra en tu prueba
 de copia defensiva?
 
->
+> assertEquals verifica igualdad de valor: prueba que ambas listas contienen los mismos elementos en el mismo orden.
+assertNotSame verifica desigualdad de identidad/referencia de memoria: prueba que la lista interna del objeto Producto y la lista original pasada al constructor son dos instancias distintas en la memoria RAM.
+assertNotSame demuestra que se realizó una copia defensiva real instanciando un nuevo objeto, garantizando la inmutabilidad de la entidad aunque la colección original sea modificada externamente.
 
 **7.5** ¿Por qué una prueba de un `Flux` que no llama a `verifyComplete()` (o a
 `verify()`) no está probando nada?
 
->
+> Porque los flujos reactivos en Project Reactor son lazy. Las operaciones y cadenas declaradas en un Flux no se ejecutan hasta que un consumidor se suscribe formalmente al flujo (onSubscribe).
+StepVerifier.create(...) solo construye la definición de las comprobaciones. Es la llamada final a .verifyComplete() o .verify() la que ejecuta la suscripción al Flux, dispara el flujo de datos y evalúa si las aserciones se cumplieron. Sin invocar verify(), el código reactivo jamás corre y la prueba terminaría en un falso positivo.
 
 ---
 
