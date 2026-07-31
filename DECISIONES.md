@@ -17,10 +17,10 @@
 
 ## Datos
 
-- **Nombre:**
-- **Cédula:**
-- **NN (dos últimos dígitos):**
-- **Categoría asignada (según el último dígito):**
+- **Nombre:** Harvey Joel Fonseca Escobar 
+- **Cédula:** 1725570889 
+- **NN (dos últimos dígitos):** 89
+- **Categoría asignada (según el último dígito):** Quinua
 
 ---
 
@@ -28,23 +28,25 @@
 
 **1.1** ¿Qué archivo activa el perfil `prod` y qué línea exacta lo hace?
 
->
+> el que activa el perfil es application.properties, y la línea es: spring.profiles.active=prod
 
 **1.2** Pega la línea del log de arranque donde se ve tu puerto y el perfil activo.
 
-```
 
+``` 
+2026-07-30T21:11:16.872-05:00  INFO 28620 --- [agrosmart] [           main] com.example.demo.AgrosmartApplication    : The following 1 profile is active: "prod"
+2026-07-30T21:24:16.906-05:00  INFO 25732 --- [agrosmart] [           main] o.s.boot.reactor.netty.NettyWebServer    : Netty started on port 8189 (http)
 ```
 
 **1.3** ¿Qué habría pasado si dejabas `ddl-auto=create-drop` en lugar de `update`?
 Responde pensando en tus datos sembrados.
 
->
+>Con create-drop Hibernate crea las tablas al iniciar la aplicación y las destruye inmediatamente al detener o cerrar el contexto de Spring. Respecto a los 5 productos sembrados, cada vez que detuviera la aplicación perdería absolutamente todos los registros y la estructura de la base de datos, obligando a recrear todo desde cero. Con update los datos sembrados y la tabla tbl_productos_base_89 se conservan intactos entre reinicios.
 
 **1.4** ¿Levantaste PostgreSQL con `compose.yaml` (Opción A) o con una instalación local
 (Opción B)? ¿Qué ventaja tiene la que elegiste?
 
->
+>Elegí la Opción A, la ventaja principal es la reproducibilidad y la automatización total del entorno ya que no requiero instalar ni configurar PostgreSQL manualmente en mi sistema operativo local y el módulo spring-boot-docker-compose se encarga de levantar el contenedor, inyectar automáticamente la URL, usuario y contraseña a la aplicación en el arranque, y detener la base de datos al finalizar, garantizando un entorno aislado y portable para la evaluación.
 
 ---
 
